@@ -10,7 +10,8 @@ fi
 # to change in the future.
 prefix=${prefix:=/usr}
 initdir=${initdir:=/etc/init.d}
-unitdir=${unitdir:=/usr/lib/systemd/system}
+unitdir_redhat=${unitdir:=/usr/lib/systemd/system}
+unitdir_debian=${unitdir:=/lib/systemd/system}
 tmpfilesdir=${tmpfilesdir:=/usr/lib/tmpfiles.d}
 datadir=${datadir:=${prefix}/share}
 real_name=${real_name:=<%= EZBake::Config[:real_name] -%>}
@@ -71,8 +72,13 @@ function task_service {
             task install_source_rpm_systemd
         fi
     elif [ "$OSFAMILY" = "Debian" ]; then
+        sysv_codenames=("squeeze" "wheezy" "lucid" "precise" "trusty")
         defaultsdir="/etc/default"
-        task install_source_deb
+        if $(echo ${sysv_codenames[@]} | grep -q $CODENAME) ; then
+            task install_source_deb_sysv
+        else
+            task install_source_deb_systemd
+        fi
     else
         echo "Unsupported platform, exiting ..."
         exit 1
@@ -100,10 +106,19 @@ function task_install_source_rpm_systemd {
 }
 
 # Source based install for Debian based setups
-function task_install_source_deb {
+function task_install_source_deb_sysv {
     task preinst_deb
     task install_deb
     task sysv_init_deb
+    task logrotate
+    task postinst_deb
+}
+
+# Source based install for Debian based + systemd setups
+function task_install_source_deb_systemd {
+    task preinst_deb
+    task install_deb
+    task systemd_deb
     task logrotate
     task postinst_deb
 }
@@ -201,8 +216,8 @@ function task_sysv_init_suse {
 # Install the systemd and defaults configuration for Redhat.
 function task_systemd_redhat {
     task defaults
-    install -d -m 0755 "${DESTDIR}${unitdir}"
-    install -m 0644 ext/redhat/<%= EZBake::Config[:project] %>.service "${DESTDIR}${unitdir}/<%= EZBake::Config[:project] %>.service"
+    install -d -m 0755 "${DESTDIR}${unitdir_redhat}"
+    install -m 0644 ext/redhat/<%= EZBake::Config[:project] %>.service "${DESTDIR}${unitdir_redhat}/<%= EZBake::Config[:project] %>.service"
     install -d -m 0755 "${DESTDIR}${tmpfilesdir}"
     install -m 0644 ext/<%= EZBake::Config[:project] %>.tmpfiles.conf "${DESTDIR}${tmpfilesdir}/<%= EZBake::Config[:project] %>.conf"
 }
@@ -213,6 +228,15 @@ function task_sysv_init_deb {
     install -d -m 0755 "${DESTDIR}${initdir}"
     install -m 0755 ext/debian/${real_name}.init "${DESTDIR}${initdir}/${real_name}"
     install -d -m 0755 "${DESTDIR}${rundir}"
+}
+
+# Install the systemd and defaults configuration for Debian.
+function task_systemd_debian {
+    task defaults
+    install -d -m 0755 "${DESTDIR}${unitdir_debian}"
+    install -m 0644 ext/debian/<%= EZBake::Config[:project] %>.service "${DESTDIR}${unitdir_debian}/<%= EZBake::Config[:project] %>.service"
+    install -d -m 0755 "${DESTDIR}${tmpfilesdir}"
+    install -m 0644 ext/<%= EZBake::Config[:project] %>.tmpfiles.conf "${DESTDIR}${tmpfilesdir}/<%= EZBake::Config[:project] %>.conf"
 }
 
 function task_service_account {
@@ -310,11 +334,13 @@ function debug_echo {
 function osdetection {
     OSFAMILY=`facter osfamily`
     MAJREV=`facter operatingsystemmajrelease`
+    CODENAME=`facter os.distro.codename`
 
     debug_echo "OS Detection results"
     debug_echo
     debug_echo "OSFAMILY: ${OSFAMILY}"
     debug_echo "MAJREV: ${MAJREV}"
+    debug_echo "CODENAME: ${CODENAME}"
     debug_echo
 }
 
