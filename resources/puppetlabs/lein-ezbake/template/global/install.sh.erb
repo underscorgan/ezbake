@@ -12,6 +12,8 @@ prefix=${prefix:=/usr}
 initdir=${initdir:=/etc/init.d}
 unitdir_redhat=${unitdir:=/usr/lib/systemd/system}
 unitdir_debian=${unitdir:=/lib/systemd/system}
+defaultsdir_redhat=${defaultsdir:=/etc/sysconfig}
+defaultsdir_debian=${defaultsdir:=/etc/default}
 tmpfilesdir=${tmpfilesdir:=/usr/lib/tmpfiles.d}
 datadir=${datadir:=${prefix}/share}
 real_name=${real_name:=<%= EZBake::Config[:real_name] -%>}
@@ -65,7 +67,6 @@ function task_service {
     osdetection
 
     if [ "$OSFAMILY" = "RedHat" ]; then
-        defaultsdir="/etc/sysconfig"
         if [ $MAJREV -lt 7 ]; then
             task install_source_rpm_sysv
         else
@@ -73,7 +74,6 @@ function task_service {
         fi
     elif [ "$OSFAMILY" = "Debian" ]; then
         sysv_codenames=("squeeze" "wheezy" "lucid" "precise" "trusty")
-        defaultsdir="/etc/default"
         if $(echo ${sysv_codenames[@]} | grep -q $CODENAME) ; then
             task install_source_deb_sysv
         else
@@ -194,28 +194,33 @@ function task_termini {
 }
 <% end -%>
 
-function task_defaults {
-    install -d -m 0755 "${DESTDIR}${defaultsdir}"
-    install -m 0644 ext/default "${DESTDIR}${defaultsdir}/<%= EZBake::Config[:project] %>"
+function task_defaults_redhat {
+    install -d -m 0755 "${DESTDIR}${defaultsdir_redhat}"
+    install -m 0644 ext/default "${DESTDIR}${defaultsdir_redhat}/<%= EZBake::Config[:project] %>"
+}
+
+function task_defaults_debian {
+    install -d -m 0755 "${DESTDIR}${defaultsdir_debian}"
+    install -m 0644 ext/debian/<%= EZBake::Config[:project] %>.default_file "${DESTDIR}${defaultsdir_debian}/<%= EZBake::Config[:project] %>"
 }
 
 # Install the sysv and defaults configuration for Redhat.
 function task_sysv_init_redhat {
-    task defaults
+    task defaults_redhat
     install -d -m 0755 "${DESTDIR}${initdir}"
     install -m 0755 ext/redhat/init "${DESTDIR}${initdir}/<%= EZBake::Config[:project] %>"
 }
 
 # Install the sysv and defaults configuration for SuSE.
 function task_sysv_init_suse {
-    task defaults
+    task defaults_redhat
     install -d -m 0755 "${DESTDIR}${initdir}"
     install -m 0755 ext/redhat/init.suse "${DESTDIR}${initdir}/<%= EZBake::Config[:project] %>"
 }
 
 # Install the systemd and defaults configuration for Redhat.
 function task_systemd_redhat {
-    task defaults
+    task defaults_redhat
     install -d -m 0755 "${DESTDIR}${unitdir_redhat}"
     install -m 0644 ext/redhat/<%= EZBake::Config[:project] %>.service "${DESTDIR}${unitdir_redhat}/<%= EZBake::Config[:project] %>.service"
     install -d -m 0755 "${DESTDIR}${tmpfilesdir}"
@@ -224,17 +229,17 @@ function task_systemd_redhat {
 
 # Install the sysv and defaults configuration for Debian.
 function task_sysv_init_deb {
-    task defaults
+    task defaults_debian
     install -d -m 0755 "${DESTDIR}${initdir}"
-    install -m 0755 ext/debian/${real_name}.init "${DESTDIR}${initdir}/${real_name}"
+    install -m 0755 ext/debian/${real_name}.init_script "${DESTDIR}${initdir}/${real_name}"
     install -d -m 0755 "${DESTDIR}${rundir}"
 }
 
 # Install the systemd and defaults configuration for Debian.
 function task_systemd_debian {
-    task defaults
+    task defaults_debian
     install -d -m 0755 "${DESTDIR}${unitdir_debian}"
-    install -m 0644 ext/debian/<%= EZBake::Config[:project] %>.service "${DESTDIR}${unitdir_debian}/<%= EZBake::Config[:project] %>.service"
+    install -m 0644 ext/debian/<%= EZBake::Config[:project] %>.service_file "${DESTDIR}${unitdir_debian}/<%= EZBake::Config[:project] %>.service"
     install -d -m 0755 "${DESTDIR}${tmpfilesdir}"
     install -m 0644 ext/<%= EZBake::Config[:project] %>.tmpfiles.conf "${DESTDIR}${tmpfilesdir}/<%= EZBake::Config[:project] %>.conf"
 }
