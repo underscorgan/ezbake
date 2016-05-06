@@ -236,7 +236,7 @@ function task_sysv_init_deb {
 }
 
 # Install the systemd and defaults configuration for Debian.
-function task_systemd_debian {
+function task_systemd_deb {
     task defaults_debian
     install -d -m 0755 "${DESTDIR}${unitdir_debian}"
     install -m 0644 ext/debian/<%= EZBake::Config[:project] %>.service_file "${DESTDIR}${unitdir_debian}/<%= EZBake::Config[:project] %>.service"

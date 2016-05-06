@@ -32,7 +32,7 @@ install/<%= EZBake::Config[:project] %>::
 			bash install.sh logrotate_legacy ; \
 		fi ; \
 	fi
-	if $$(echo ${SYSV_CODENAMES[@]} | grep -q ${CODENAME}) ; then \
+	if $$(echo "${SYSV_CODENAMES}" | grep -q ${CODENAME}) ; then \
 		bash install.sh sysv_init_deb ; \
 	else \
 		bash install.sh systemd_deb ; \
