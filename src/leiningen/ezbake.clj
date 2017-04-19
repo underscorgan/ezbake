@@ -16,7 +16,7 @@ Actions:
   ([project action]
    (let [resource-path (get-in project [:lein-ezbake :resources :dir])
          build-target  (ezbake-core/get-local-ezbake-var
-                         project :build-type "foss")]
+                         project :build-type "global")]
       ;; Rebind ezbake-core/resource-path using one of the given project's resource
       ;; paths. The first in the list is typically "dev-resources". This value can
       ;; be over written in the :resources-path
