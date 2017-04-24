@@ -458,6 +458,7 @@ Dependency tree:
      :start-timeout             (get-local-ezbake-var lein-project :start-timeout "300")
      :stop-timeout              (get-local-ezbake-var lein-project :stop-timeout "60")
      :open-file-limit           (get-local-ezbake-var lein-project :open-file-limit "nil")
+     :build-type                (get-local-ezbake-var lein-project :build-type)
      :main-namespace            (get-local-ezbake-var lein-project
                                                       :main-namespace
                                                       "puppetlabs.trapperkeeper.main")
