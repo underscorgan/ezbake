@@ -21,7 +21,7 @@ end-%>
   Depends: ${misc:Depends}, openjdk-7-jre-headless | openjdk-8-jre-headless, net-tools, adduser, procps<%= additional_dependencies_string -%>
 <% elsif EZBake::Config[:build_type] == 'pe' -%>
   Depends: ${misc:Depends}, pe-java, pe-puppet-enterprise-release, net-tools, adduser, procps<%= additional_dependencies_string -%>
- <% end -%>
+<% end %>
 Replaces: <%= EZBake::Config[:replaces_pkgs].map {|package, version| "#{package} (<< #{version}-1#{Pkg::Config.packager}1)" }.join(",") %>
 Conflicts: <%= EZBake::Config[:replaces_pkgs].map {|package, version| "#{package} (<< #{version}-1#{Pkg::Config.packager}1)" }.join(",") %>
 Description: Puppet Labs <%= EZBake::Config[:project] %>
