@@ -10,7 +10,12 @@
 #
 [Unit]
 Description=<%= EZBake::Config[:project] %> Service
-After=syslog.target network.target
+
+<% if EZBake::Config[:build_type] == 'foss' -%>
+	After=syslog.target network.target
+<% else %>
+	After=syslog.target network.target <%= EZBake::Config[:start_after].map {|dep| "#{dep}.service" }.join(" ") %>
+<% end-%>
 
 [Service]
 Type=forking

@@ -14,16 +14,13 @@ Architecture: all
 # net-tools is required for netstat usage in service unit file
 # See: https://tickets.puppetlabs.com/browse/SERVER-338
 # procps is required for pgrep, used in several of the init scripts
+<% if !EZBake::Config[:debian][:additional_dependencies].empty?
+     additional_dependencies_string = ", #{EZBake::Config[:debian][:additional_dependencies].join(', ')}"
+end-%>
 <% if EZBAKE::Config[:build_type] == 'foss' -%>
-	Depends: ${misc:Depends}, openjdk-7-jre-headless | openjdk-8-jre-headless, net-tools, adduser, procps<%=
-    	if !EZBake::Config[:debian][:additional_dependencies].empty?
-      	", " + EZBake::Config[:debian][:additional_dependencies].join(", ")
-    	end %>
+  Depends: ${misc:Depends}, openjdk-7-jre-headless | openjdk-8-jre-headless, net-tools, adduser, procps<%= additional_dependencies_string -%>
 <% elsif EZBAKE::Config[:build_type] == 'pe' -%>
-	Depends: ${misc:Depends}, pe-java, pe-puppet-enterprise-release, net-tools, adduser, procps<%=
-    	if !EZBake::Config[:debian][:additional_dependencies].empty?
-     	 ", " + EZBake::Config[:debian][:additional_dependencies].join(", ")
-    	end %>
+  Depends: ${misc:Depends}, pe-java, pe-puppet-enterprise-release, net-tools, adduser, procps<%= additional_dependencies_string -%>
  <% end -%>
 Replaces: <%= EZBake::Config[:replaces_pkgs].map {|package, version| "#{package} (<< #{version}-1#{Pkg::Config.packager}1)" }.join(",") %>
 Conflicts: <%= EZBake::Config[:replaces_pkgs].map {|package, version| "#{package} (<< #{version}-1#{Pkg::Config.packager}1)" }.join(",") %>
@@ -41,5 +38,4 @@ Description: Termini for <%= EZBake::Config[:project] %>
  Contains terminus for:
 <% EZBake::Config[:terminus_info].each do |proj_name, info| -%>
   <%= proj_name %> (version <%= info[:version] %>)
-<% end -%>
 <% end -%>

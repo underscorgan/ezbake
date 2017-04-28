@@ -25,9 +25,10 @@
 %global _with_sysvinit 0
 %global _systemd_el    0
 %global _systemd_sles  0
-%global _old_sles      0
 %global _old_el        0
-
+%global _old_sles      0
+%global _sles          0
+%global _certs_package  ca-certificates
 
 %if 0%{?fedora} >= 18 || 0%{?rhel} >= 7
 %global _with_systemd 1
@@ -36,10 +37,11 @@
 
 # We do not support any sles version less than 12, as there is not a sufficient
 # version of OpenJDK available to test against.
-%if 0%{?suse_version} >= 1210
-%global _with_systemd 1
-%global _systemd_sles 1
-%global _sles         1
+%if 0%{?suse_version}   >= 1210
+%global _with_systemd   1
+%global _systemd_sles   1
+%global _sles           1
+%global _certs_package  ca-certificates-mozilla
 %endif
 
 %if 0%{?rhel} && 0%{?rhel} < 7
@@ -47,17 +49,12 @@
 %global _old_el        1
 %endif
 
-%if 0%{?suse_version} && 0%{?suse_version} < 1210
-%global _with_sysvinit 1
-%global _old_sles      1
-%endif
-
-# java 1.8.0 is available starting in fedora 20 and el 6
-# SLES 12 still only has java 1.7.0
-%if 0%{?fedora} >= 20 || 0%{?rhel} >= 6
-%global open_jdk          java-1.8.0-openjdk-headless
+# java 1.8.0 is available starting in fedora 20, el 6 and sles-12sp1
+%if 0%{?suse_version}   >= 1210
+%global open_jdk          java-1_8_0-openjdk-headless
 %else
-%global open_jdk          java-1.7.0-openjdk
+%global open_jdk          java-1.8.0-openjdk-headless
+%endif
 
 # Use the alternate locations for things.
 %global _sysconfdir      /etc
@@ -73,8 +70,11 @@ BuildRoot:        %{_tmppath}/%{realname}-%{version}-%{release}-root-%(%{__id_u}
 
 Summary:          Puppet Labs - <%= EZBake::Config[:project] %>
 Vendor:           Puppet Labs <info@puppetlabs.com>
-License:          PL Commercial
+<% if EZBake::Config[:build_type] == 'foss' -%>
 License:          ASL 2.0
+<% else %>
+License:          PL Commercial
+<% end-%>
 
 URL:              http://puppetlabs.com
 Source0:          %{name}-%{realversion}.tar.gz
@@ -92,8 +92,11 @@ Conflicts:        <%=package-%> <= <%=version-%>-1
 AutoReq:          0
 AutoProv:         0
 
-BuildRequires:    puppet-agent
+<% if EZBake::Config[:build_type] == 'foss' -%>
 BuildRequires:    ruby
+<% else %>
+BuildRequires:    puppet-agent
+<% end -%>
 BuildRequires:    /usr/sbin/useradd
 %if %{_with_systemd}
 BuildRequires:    systemd
@@ -101,9 +104,11 @@ BuildRequires:    systemd
 %if %{_old_el}
 Requires:         chkconfig
 %endif
-%if %{_old_sles}
-Requires:         aaa_base
-%endif
+
+<% if EZBake::Config[:build_type] == 'foss' -%>
+# Required to get trustanchors for java
+BuildRequires: %{_certs_package}
+<% end -%>
 
 %if %{_systemd_el}
 Requires(post):   systemd
@@ -115,10 +120,13 @@ Requires(postun): systemd
 %{?systemd_requires}
 %endif
 
+<% if EZBake::Config[:build_type] == 'foss' -%>
+Requires:         %{open_jdk}
+<% else %>
 Requires:         pe-java
 Requires:         pe-puppet-enterprise-release
+<% end -%>
 Requires:         bash
-Requires:         %{open_jdk}
 # net-tools is required for netstat usage in service unit file
 # See: https://tickets.puppetlabs.com/browse/SERVER-338
 Requires:         net-tools
@@ -145,7 +153,6 @@ Requires: puppet-agent
 Obsoletes: <%= proj_name -%>-terminus < <%= info[:version].gsub('-', '.') %>
 Provides:  <%= proj_name -%>-terminus >= <%= info[:version].gsub('-', '.') %>
 <% end -%>
-
 %description termini
 Termini for <%= EZBake::Config[:project] %>
 Contains terminus for:
