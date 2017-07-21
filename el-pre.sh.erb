@@ -1,0 +1,19 @@
+# Note: changes to this section of the spec may require synchronisation with the
+# install.sh source based installation methodology.
+#
+# Add <%= group %> group
+getent group <%= group %> > /dev/null || \
+  groupadd -r <%= group %> || :
+# Add <%= user %> user
+if getent passwd <%= user %> > /dev/null; then
+  usermod --gid <%= group %> --home %{_app_data} \
+  --comment "<%= project %> daemon" <%= user %> || :
+else
+  useradd -r --gid <%= group %> --home %{_app_data} --shell $(which nologin) \
+    --comment "<%= project %> daemon"  <%= user %> || :
+fi
+<% if defined?(additional_preinst)
+additional_preinst.split(',').each do |cmd| -%>
+<%= cmd %>
+<% end -%>
+<% end -%>
