@@ -27,7 +27,7 @@ options.debug = false
 options.logrotate = false
 
 OptionParser.new do |opts|
-  opts.on('-o', '--operating-system OS', [:fedora, :el, :suse], 'Select operating system (fedora, el, suse)') do |o|
+  opts.on('-o', '--operating-system OS', [:fedora, :el, :suse, :debian, :ubuntu], 'Select operating system (fedora, el, suse, debian, ubuntu)') do |o|
     options.operating_system = o
   end
   opts.on('--os-version VERSION', Integer, 'VERSION of the operating system to build for') do |v|
@@ -85,9 +85,17 @@ fail "--name is required!" unless options.name
 options.realname = options.name if options.realname.nil?
 fail "--package-version is required!" unless options.version
 fail "--operating-system is required!" unless options.operating_system
-fail "--os-version is required!" unless options.os_version
-options.dist = "#{options.operating_system}#{options.os_version}" if options.dist.nil?
 options.chdir = options.dist if options.chdir.nil?
+options.output_type = case options.operating_system
+                      when :fedora, :el, :suse
+                        'rpm'
+                      when :debian, :ubuntu
+                        'deb'
+                      else
+                        fail "Can't figure out the output type for #{options.operating_system}. Teach me?"
+                      end
+fail "--os-version is required!" unless options.os_version or options.output_type == 'deb'
+options.dist = "#{options.operating_system}#{options.os_version}" if options.dist.nil?
 
 if options.debug
   puts "=========================="
@@ -103,49 +111,126 @@ options.app_rundir = "/var/run/puppetlabs/#{options.realname}"
 options.app_prefix = "/opt/puppetlabs/server/apps/#{options.realname}"
 options.app_data = "/opt/puppetlabs/server/data/#{options.realname}"
 
-fpm_opts << "--rpm-rpmbuild-define 'rpmversion #{options.version}'"
-fpm_opts << "--rpm-rpmbuild-define '_app_logdir #{options.app_logdir}'"
-fpm_opts << "--rpm-rpmbuild-define '_app_rundir #{options.app_logdir}'"
-fpm_opts << "--rpm-rpmbuild-define '_app_prefix #{options.app_prefix}'"
-fpm_opts << "--rpm-rpmbuild-define '_app_data #{options.app_data}'"
+# rpm specific options
+if options.output_type == 'rpm'
 
-if options.operating_system == :fedora # all supported fedoras are systemd
-  options.systemd = 1
-  options.systemd_el = 1
-elsif options.operating_system == :el && options.os_version >= 7 # systemd el
-  options.systemd = 1
-  options.systemd_el = 1
-elsif options.operating_system == :el # old el
-  options.sysvinit = 1
-  options.old_el = 1
-elsif options.operating_system == :suse && options.os_version >= 1210
-  options.systemd = 1
-  options.systemd_sles = 1
-  options.sles = 1
-  options.certs_package = 'ca-certificates-mozilla'
-  options.java = 'java-1_8_0-openjdk-headless'
-elsif options.operating_system == :suse #old sles
-  options.sysvinit = 1
-  options.old_sles = 1
+  fpm_opts << "--rpm-rpmbuild-define 'rpmversion #{options.version}'"
+  fpm_opts << "--rpm-rpmbuild-define '_app_logdir #{options.app_logdir}'"
+  fpm_opts << "--rpm-rpmbuild-define '_app_rundir #{options.app_logdir}'"
+  fpm_opts << "--rpm-rpmbuild-define '_app_prefix #{options.app_prefix}'"
+  fpm_opts << "--rpm-rpmbuild-define '_app_data #{options.app_data}'"
+
+  if options.operating_system == :fedora # all supported fedoras are systemd
+    options.systemd = 1
+    options.systemd_el = 1
+  elsif options.operating_system == :el && options.os_version >= 7 # systemd el
+    options.systemd = 1
+    options.systemd_el = 1
+  elsif options.operating_system == :el # old el
+    options.sysvinit = 1
+    options.old_el = 1
+  elsif options.operating_system == :suse && options.os_version >= 1210
+    options.systemd = 1
+    options.systemd_sles = 1
+    options.sles = 1
+    options.certs_package = 'ca-certificates-mozilla'
+    options.java = 'java-1_8_0-openjdk-headless'
+  elsif options.operating_system == :suse #old sles
+    options.sysvinit = 1
+    options.old_sles = 1
+  end
+
+  fpm_opts << "--rpm-rpmbuild-define '_with_sysvinit #{options.sysvinit}'"
+  fpm_opts << "--rpm-rpmbuild-define '_with_systemd #{options.systemd}'"
+  fpm_opts << "--rpm-rpmbuild-define '_old_sles #{options.old_sles}'"
+  fpm_opts << "--rpm-rpmbuild-define '_systemd_el #{options.systemd_el}'"
+  fpm_opts << "--rpm-rpmbuild-define '_systemd_sles #{options.systemd_sles}'"
+  fpm_opts << "--rpm-rpmbuild-define '_old_el #{options.old_el}'"
+
+
+  fpm_opts << "--rpm-rpmbuild-define '_sysconfdir /etc'"
+  fpm_opts << "--rpm-rpmbuild-define '_prefix #{options.app_prefix}'"
+  fpm_opts << "--rpm-rpmbuild-define '_rundir /var/run'"
+  fpm_opts << "--rpm-rpmbuild-define '__jar_repack 0'"
+
+  fpm_opts << "--rpm-dist #{options.dist}"
+
+  if options.old_el == 1
+    fpm_opts << "--depends chkconfig"
+  elsif options.old_sles == 1
+    fpm_opts << "--depends aaa_base"
+  end
+
+  if options.systemd_el == 1
+    fpm_opts << "--depends systemd"
+  end
+
+ #files/dirs
+  fpm_opts << "--config-files /etc/puppetlabs/#{options.realname}"
+  fpm_opts << "--config-files /etc/sysconfig/#{options.name}"
+
+  options.additional_dirs.each do |dir|
+    fpm_opts << "--directories #{dir}"
+  end
+
+  if options.logrotate
+    fpm_opts << "--config-files /etc/logrotate.d/#{options.name}"
+  end
+
+  fpm_opts << "--directories #{options.app_logdir}"
+  fpm_opts << "--directories /etc/puppetlabs/#{options.realname}"
+  fpm_opts << "--directories #{options.app_rundir}"
+  fpm_opts << "--rpm-auto-add-directories"
+  fpm_opts << "--rpm-auto-add-exclude-directories /etc/puppetlabs"
+  fpm_opts << "--rpm-auto-add-exclude-directories /opt/puppetlabs"
+  fpm_opts << "--rpm-auto-add-exclude-directories /opt/puppetlabs/bin" 
+  fpm_opts << "--rpm-auto-add-exclude-directories /opt/puppetlabs/server" 
+  fpm_opts << "--rpm-auto-add-exclude-directories /opt/puppetlabs/server/apps" 
+  fpm_opts << "--rpm-auto-add-exclude-directories /opt/puppetlabs/server/bin" 
+  fpm_opts << "--rpm-auto-add-exclude-directories /opt/puppetlabs/server/data" 
+  fpm_opts << "--rpm-auto-add-exclude-directories /usr/lib/systemd" 
+  fpm_opts << "--rpm-auto-add-exclude-directories /usr/lib/systemd/system" 
+  fpm_opts << "--rpm-auto-add-exclude-directories /etc/init.d" 
+  fpm_opts << "--rpm-auto-add-exclude-directories /etc/rc.d" 
+  fpm_opts << "--rpm-auto-add-exclude-directories /etc/logrotate.d" 
+  fpm_opts << "--rpm-auto-add-exclude-directories /etc/rc.d/init.d" 
+  fpm_opts << "--rpm-auto-add-exclude-directories /usr/lib/tmpfiles.d" 
+  fpm_opts << "--rpm-auto-add-exclude-directories /var/log/puppetlabs" 
+  fpm_opts << "--rpm-auto-add-exclude-directories /var/run/puppetlabs" 
+  fpm_opts << "--rpm-attr 750,#{options.user},#{options.group}:/etc/puppetlabs/#{options.realname}"
+  fpm_opts << "--rpm-attr 700,#{options.user},#{options.group}:#{options.app_logdir}"
+  fpm_opts << "--rpm-attr -,#{options.user},#{options.group}:#{options.app_data}"
+  fpm_opts << "--rpm-attr 755,#{options.user},#{options.group}:#{options.app_rundir}"
+
+  fpm_opts << "--edit"
+  fpm_opts << "--category 'System Environment/Daemons'"
+#dev specific options
+elsif options.output_type == 'deb'
+  if options.dist != "#{options.operating_system}#{options.os_version}"
+    options.release = "#{options.release}#{options.dist}"
+  end
+  options.java = 'openjdk-8-jre-headless'
+
+  fpm_opts << '--deb-build-depends "debhelper (>= 7.0.0~)"' 
+  fpm_opts << '--deb-build-depends cdbs'
+  fpm_opts << '--deb-build-depends bc' 
+  fpm_opts << '--deb-build-depends mawk'
+  fpm_opts << '--deb-build-depends lsb-release'
+  if options.is_pe
+    fpm_opts << '--deb-build-depends puppet-agent'
+  else
+    fpm_opts << '--deb-build-depends "ruby | ruby-interpreter"'
+  end
+  #todo -- additional build deps
+  #fpm_opts << '--depends ${misc:Depends}'
+  fpm_opts << '--deb-priority optional'
+  fpm_opts << '--category utils'
 end
 
-fpm_opts << "--rpm-rpmbuild-define '_with_sysvinit #{options.sysvinit}'"
-fpm_opts << "--rpm-rpmbuild-define '_with_systemd #{options.systemd}'"
-fpm_opts << "--rpm-rpmbuild-define '_old_sles #{options.old_sles}'"
-fpm_opts << "--rpm-rpmbuild-define '_systemd_el #{options.systemd_el}'"
-fpm_opts << "--rpm-rpmbuild-define '_systemd_sles #{options.systemd_sles}'"
-fpm_opts << "--rpm-rpmbuild-define '_old_el #{options.old_el}'"
-
-
-fpm_opts << "--rpm-rpmbuild-define '_sysconfdir /etc'"
-fpm_opts << "--rpm-rpmbuild-define '_prefix #{options.app_prefix}'"
-fpm_opts << "--rpm-rpmbuild-define '_rundir /var/run'"
-fpm_opts << "--rpm-rpmbuild-define '__jar_repack 0'"
-
+# generic options!
 fpm_opts << "--name #{options.name}"
 fpm_opts << "--version #{options.version}"
 fpm_opts << "--iteration #{options.release}"
-fpm_opts << "--rpm-dist #{options.dist}"
 fpm_opts << "--vendor 'Puppet Labs <info@puppetlabs.com>'"
 
 if options.is_pe
@@ -155,22 +240,12 @@ else
 end
 
 fpm_opts << "--url http://puppet.com"
-fpm_opts << "--category 'System Environment/Daemons'"
 fpm_opts << "--architecture all"
 
+# looks like fpm does the needed to update the version to be what debian wants
 options.replaces.each do |pkg, version|
-  fpm_opts << "--replaces #{pkg} #{version}-1"
-  fpm_opts << "--conflicts #{pkg} #{version}-1"
-end
-
-if options.old_el == 1
-  fpm_opts << "--depends chkconfig"
-elsif options.old_sles == 1
-  fpm_opts << "--depends aaa_base"
-end
-
-if options.systemd_el == 1
-  fpm_opts << "--depends systemd"
+  fpm_opts << "--replaces '#{pkg} #{version}-1'"
+  fpm_opts << "--conflicts '#{pkg} #{version}-1'"
 end
 
 if options.is_pe
@@ -178,12 +253,12 @@ if options.is_pe
   fpm_opts << "--depends pe-puppet-enterprise-release"
 else
   fpm_opts << "--depends #{options.java}"
-  fpm_opts << "--depends #{options.certs_package}"
+  fpm_opts << "--depends #{options.certs_package}" if options.output_type == 'rpm'
 end
 
 fpm_opts << "--depends bash"
 fpm_opts << "--depends net-tools"
-fpm_opts << "--depends /usr/bin/which"
+fpm_opts << "--depends /usr/bin/which" if options.output_type == 'rpm'
 fpm_opts << "--depends procps"
 
 options.additional_dependencies.each do |dep|
@@ -196,52 +271,15 @@ fpm_opts << "--template-scripts"
 fpm_opts << "--template-value 'user=#{options.user}'"
 fpm_opts << "--template-value 'group=#{options.group}'"
 fpm_opts << "--template-value 'project=#{options.name}'"
-fpm_opts << "--before-install ~/el-pre.sh.erb" #TODO
-fpm_opts << "--after-install ~/el-post.sh.erb" #TODO
-fpm_opts << "--before-remove ~/el-preun.sh.erb" #TODO
-fpm_opts << "--after-remove ~/el-postun.sh.erb" #TODO
+fpm_opts << "--template-value 'real_name=#{options.realname}'"
+fpm_opts << "--before-install ../#{options.output_type}-pre.sh.erb" #TODO
+fpm_opts << "--after-install ../#{options.output_type}-post.sh.erb" #TODO
+fpm_opts << "--before-remove ../#{options.output_type}-preun.sh.erb" #TODO
+fpm_opts << "--after-remove ../#{options.output_type}-postun.sh.erb" #TODO
 
-#files/dirs
-fpm_opts << "--config-files /etc/puppetlabs/#{options.realname}"
-fpm_opts << "--config-files /etc/sysconfig/#{options.name}"
-
-options.additional_dirs.each do |dir|
-  fpm_opts << "--directories #{dir}"
-end
-
-if options.logrotate
-  fpm_opts << "--config-files /etc/logrotate.d/#{options.name}"
-end
-
-fpm_opts << "--directories #{options.app_logdir}"
-fpm_opts << "--directories /etc/puppetlabs/#{options.realname}"
-fpm_opts << "--directories #{options.app_rundir}"
-fpm_opts << "--rpm-auto-add-directories"
-fpm_opts << "--rpm-auto-add-exclude-directories /etc/puppetlabs"
-fpm_opts << "--rpm-auto-add-exclude-directories /opt/puppetlabs"
-fpm_opts << "--rpm-auto-add-exclude-directories /opt/puppetlabs/bin" 
-fpm_opts << "--rpm-auto-add-exclude-directories /opt/puppetlabs/server" 
-fpm_opts << "--rpm-auto-add-exclude-directories /opt/puppetlabs/server/apps" 
-fpm_opts << "--rpm-auto-add-exclude-directories /opt/puppetlabs/server/bin" 
-fpm_opts << "--rpm-auto-add-exclude-directories /opt/puppetlabs/server/data" 
-fpm_opts << "--rpm-auto-add-exclude-directories /usr/lib/systemd" 
-fpm_opts << "--rpm-auto-add-exclude-directories /usr/lib/systemd/system" 
-fpm_opts << "--rpm-auto-add-exclude-directories /etc/init.d" 
-fpm_opts << "--rpm-auto-add-exclude-directories /etc/rc.d" 
-fpm_opts << "--rpm-auto-add-exclude-directories /etc/logrotate.d" 
-fpm_opts << "--rpm-auto-add-exclude-directories /etc/rc.d/init.d" 
-fpm_opts << "--rpm-auto-add-exclude-directories /usr/lib/tmpfiles.d" 
-fpm_opts << "--rpm-auto-add-exclude-directories /var/log/puppetlabs" 
-fpm_opts << "--rpm-auto-add-exclude-directories /var/run/puppetlabs" 
-fpm_opts << "--rpm-attr 750,#{options.user},#{options.group}:/etc/puppetlabs/#{options.realname}"
-fpm_opts << "--rpm-attr 700,#{options.user},#{options.group}:#{options.app_logdir}"
-fpm_opts << "--rpm-attr -,#{options.user},#{options.group}:#{options.app_data}"
-fpm_opts << "--rpm-attr 755,#{options.user},#{options.group}:#{options.app_rundir}"
-
-fpm_opts << "--edit"
 fpm_opts << "--force"
 
-fpm_opts << "--output-type rpm"
+fpm_opts << "--output-type #{options.output_type}"
 fpm_opts << "--input-type dir"
 fpm_opts << "--chdir #{options.chdir}"
 fpm_opts << "#{options.sources.join(' ')}"
