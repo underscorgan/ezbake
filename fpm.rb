@@ -25,6 +25,7 @@ options.additional_dirs = []
 options.sources = ['etc','opt','usr','var']
 options.debug = false
 options.logrotate = false
+options.termini = false
 
 OptionParser.new do |opts|
   opts.on('-o', '--operating-system OS', [:fedora, :el, :suse, :debian, :ubuntu], 'Select operating system (fedora, el, suse, debian, ubuntu)') do |o|
@@ -78,6 +79,9 @@ OptionParser.new do |opts|
   opts.on('--[no-]logrotate', 'to logrotate or not to logrotate') do |l|
     options.logrotate = l
   end
+  opts.on('--[no-]build-termini', 'whether or not we should build a termini package') do |t|
+    options.termini =  t
+  end
 end.parse!
 
 # validation
@@ -105,6 +109,8 @@ if options.debug
 end
 
 fpm_opts = Array('')
+shared_opts = Array('')
+termini_opts = Array('')
 
 options.app_logdir = "/var/log/puppetlabs/#{options.realname}"
 options.app_rundir = "/var/run/puppetlabs/#{options.realname}"
@@ -114,7 +120,7 @@ options.app_data = "/opt/puppetlabs/server/data/#{options.realname}"
 # rpm specific options
 if options.output_type == 'rpm'
 
-  fpm_opts << "--rpm-rpmbuild-define 'rpmversion #{options.version}'"
+  shared_opts << "--rpm-rpmbuild-define 'rpmversion #{options.version}'"
   fpm_opts << "--rpm-rpmbuild-define '_app_logdir #{options.app_logdir}'"
   fpm_opts << "--rpm-rpmbuild-define '_app_rundir #{options.app_logdir}'"
   fpm_opts << "--rpm-rpmbuild-define '_app_prefix #{options.app_prefix}'"
@@ -153,7 +159,7 @@ if options.output_type == 'rpm'
   fpm_opts << "--rpm-rpmbuild-define '_rundir /var/run'"
   fpm_opts << "--rpm-rpmbuild-define '__jar_repack 0'"
 
-  fpm_opts << "--rpm-dist #{options.dist}"
+  shared_opts << "--rpm-dist #{options.dist}"
 
   if options.old_el == 1
     fpm_opts << "--depends chkconfig"
@@ -180,9 +186,9 @@ if options.output_type == 'rpm'
   fpm_opts << "--directories #{options.app_logdir}"
   fpm_opts << "--directories /etc/puppetlabs/#{options.realname}"
   fpm_opts << "--directories #{options.app_rundir}"
-  fpm_opts << "--rpm-auto-add-directories"
+  shared_opts << "--rpm-auto-add-directories"
   fpm_opts << "--rpm-auto-add-exclude-directories /etc/puppetlabs"
-  fpm_opts << "--rpm-auto-add-exclude-directories /opt/puppetlabs"
+  shared_opts << "--rpm-auto-add-exclude-directories /opt/puppetlabs"
   fpm_opts << "--rpm-auto-add-exclude-directories /opt/puppetlabs/bin" 
   fpm_opts << "--rpm-auto-add-exclude-directories /opt/puppetlabs/server" 
   fpm_opts << "--rpm-auto-add-exclude-directories /opt/puppetlabs/server/apps" 
@@ -197,6 +203,22 @@ if options.output_type == 'rpm'
   fpm_opts << "--rpm-auto-add-exclude-directories /usr/lib/tmpfiles.d" 
   fpm_opts << "--rpm-auto-add-exclude-directories /var/log/puppetlabs" 
   fpm_opts << "--rpm-auto-add-exclude-directories /var/run/puppetlabs" 
+  termini_opts << "--rpm-auto-add-exclude-directories /opt/puppetlabs/puppet"
+  termini_opts << "--rpm-auto-add-exclude-directories /opt/puppetlabs/puppet/lib"
+  termini_opts << "--rpm-auto-add-exclude-directories /opt/puppetlabs/puppet/lib/ruby"
+  termini_opts << "--rpm-auto-add-exclude-directories /opt/puppetlabs/puppet/lib/ruby/vendor_ruby"
+  termini_opts << "--rpm-auto-add-exclude-directories /opt/puppetlabs/puppet/lib/ruby/vendor_ruby/puppet"
+  termini_opts << "--rpm-auto-add-exclude-directories /opt/puppetlabs/puppet/lib/ruby/vendor_ruby/puppet/face"
+  termini_opts << "--rpm-auto-add-exclude-directories /opt/puppetlabs/puppet/lib/ruby/vendor_ruby/puppet/face/node"
+  termini_opts << "--rpm-auto-add-exclude-directories /opt/puppetlabs/puppet/lib/ruby/vendor_ruby/puppet/functions"
+  termini_opts << "--rpm-auto-add-exclude-directories /opt/puppetlabs/puppet/lib/ruby/vendor_ruby/puppet/indirector"
+  termini_opts << "--rpm-auto-add-exclude-directories /opt/puppetlabs/puppet/lib/ruby/vendor_ruby/puppet/indirector/catalog"
+  termini_opts << "--rpm-auto-add-exclude-directories /opt/puppetlabs/puppet/lib/ruby/vendor_ruby/puppet/indirector/facts"
+  termini_opts << "--rpm-auto-add-exclude-directories /opt/puppetlabs/puppet/lib/ruby/vendor_ruby/puppet/indirector/node"
+  termini_opts << "--rpm-auto-add-exclude-directories /opt/puppetlabs/puppet/lib/ruby/vendor_ruby/puppet/indirector/resource"
+  termini_opts << "--rpm-auto-add-exclude-directories /opt/puppetlabs/puppet/lib/ruby/vendor_ruby/puppet/reports"
+  termini_opts << "--rpm-auto-add-exclude-directories /opt/puppetlabs/puppet/lib/ruby/vendor_ruby/puppet/util"
+  termini_opts << "--rpm-auto-add-exclude-directories /opt/puppetlabs/puppet/lib/ruby/vendor_ruby/puppet/util/puppetdb"
   fpm_opts << "--rpm-attr 750,#{options.user},#{options.group}:/etc/puppetlabs/#{options.realname}"
   fpm_opts << "--rpm-attr 700,#{options.user},#{options.group}:#{options.app_logdir}"
   fpm_opts << "--rpm-attr -,#{options.user},#{options.group}:#{options.app_data}"
@@ -204,6 +226,7 @@ if options.output_type == 'rpm'
 
   fpm_opts << "--edit"
   fpm_opts << "--category 'System Environment/Daemons'"
+  termini_opts << "--category 'Development/Libraries'"
 #dev specific options
 elsif options.output_type == 'deb'
   if options.dist != "#{options.operating_system}#{options.os_version}"
@@ -211,7 +234,7 @@ elsif options.output_type == 'deb'
   end
   options.java = 'openjdk-8-jre-headless'
 
-  fpm_opts << '--deb-build-depends "debhelper (>= 7.0.0~)"' 
+  #fpm_opts << '--deb-build-depends "debhelper (>= 7.0.0~)"' 
   fpm_opts << '--deb-build-depends cdbs'
   fpm_opts << '--deb-build-depends bc' 
   fpm_opts << '--deb-build-depends mawk'
@@ -222,25 +245,26 @@ elsif options.output_type == 'deb'
     fpm_opts << '--deb-build-depends "ruby | ruby-interpreter"'
   end
   #todo -- additional build deps
-  #fpm_opts << '--depends ${misc:Depends}'
   fpm_opts << '--deb-priority optional'
   fpm_opts << '--category utils'
 end
 
 # generic options!
 fpm_opts << "--name #{options.name}"
-fpm_opts << "--version #{options.version}"
-fpm_opts << "--iteration #{options.release}"
-fpm_opts << "--vendor 'Puppet Labs <info@puppetlabs.com>'"
+termini_opts << "--name #{options.name}-termini"
+shared_opts << "--version #{options.version}"
+shared_opts << "--iteration #{options.release}"
+shared_opts << "--vendor 'Puppet Labs <info@puppetlabs.com>'"
+shared_opts << "--maintainer 'Puppet Labs <info@puppetlabs.com>'"
 
 if options.is_pe
-  fpm_opts << "--license 'PL Commercial'"
+  shared_opts << "--license 'PL Commercial'"
 else
-  fpm_opts << "--license 'ASL 2.0'"
+  shared_opts << "--license 'ASL 2.0'"
 end
 
-fpm_opts << "--url http://puppet.com"
-fpm_opts << "--architecture all"
+shared_opts << "--url http://puppet.com"
+shared_opts << "--architecture all"
 
 # looks like fpm does the needed to update the version to be what debian wants
 options.replaces.each do |pkg, version|
@@ -261,11 +285,11 @@ fpm_opts << "--depends net-tools"
 fpm_opts << "--depends /usr/bin/which" if options.output_type == 'rpm'
 fpm_opts << "--depends procps"
 
+termini_opts << "--depends puppet-agent"
+
 options.additional_dependencies.each do |dep|
   fpm_opts << "--depends '#{dep}'"
 end
-
-# termini?
 
 fpm_opts << "--template-scripts"
 fpm_opts << "--template-value 'user=#{options.user}'"
@@ -279,10 +303,19 @@ fpm_opts << "--after-remove ../#{options.output_type}-postun.sh.erb" #TODO
 
 fpm_opts << "--force"
 
-fpm_opts << "--output-type #{options.output_type}"
-fpm_opts << "--input-type dir"
+shared_opts << "--output-type #{options.output_type}"
+shared_opts << "--input-type dir"
 fpm_opts << "--chdir #{options.chdir}"
+termini_opts << "--chdir termini" #todo
+
+fpm_opts << shared_opts
+fpm_opts.flatten!
+
+termini_opts << shared_opts
+termini_opts.flatten!
+
 fpm_opts << "#{options.sources.join(' ')}"
+termini_opts << "opt" #todo
 
 if options.debug
   puts "=========================="
@@ -297,3 +330,16 @@ out, err, stat = Open3.capture3("FPM_EDITOR=\"sed -i 's/%dir %attr(-/%attr(-/'\"
 
 puts "OUTPUT\n#{out}"
 puts "ERR\n#{err}"
+
+if options.termini
+  if options.debug
+    puts "=========================="
+    puts "FPM COMMAND"
+    puts "fpm #{termini_opts.join(' ')}"
+    puts "=========================="
+  end
+
+  out,err,stat = Open3.capture3("fpm #{termini_opts.join(' ')}")
+  puts "OUTPUT\n#{out}"
+  puts "ERR\n#{err}"
+end
