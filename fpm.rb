@@ -26,6 +26,8 @@ options.sources = ['etc','opt','usr','var']
 options.debug = false
 options.logrotate = false
 options.termini = false
+options.termini_chdir = 'termini'
+options.termini_sources = ['opt']
 
 OptionParser.new do |opts|
   opts.on('-o', '--operating-system OS', [:fedora, :el, :suse, :debian, :ubuntu], 'Select operating system (fedora, el, suse, debian, ubuntu)') do |o|
@@ -81,6 +83,12 @@ OptionParser.new do |opts|
   end
   opts.on('--[no-]build-termini', 'whether or not we should build a termini package') do |t|
     options.termini =  t
+  end
+  opts.on('--termini-chdir DIR', 'DIR for the termini build, defaults to "termini"') do |c|
+    options.termini_chdir = c
+  end
+  opts.on('--termini-sources <SOURCES>', Array, 'sources for the termini build, defaults to "opt"') do |c|
+    options.termini_chdir = c
   end
 end.parse!
 
@@ -306,7 +314,7 @@ fpm_opts << "--force"
 shared_opts << "--output-type #{options.output_type}"
 shared_opts << "--input-type dir"
 fpm_opts << "--chdir #{options.chdir}"
-termini_opts << "--chdir termini" #todo
+termini_opts << "--chdir #{options.termini_chdir}"
 
 fpm_opts << shared_opts
 fpm_opts.flatten!
@@ -315,7 +323,7 @@ termini_opts << shared_opts
 termini_opts.flatten!
 
 fpm_opts << "#{options.sources.join(' ')}"
-termini_opts << "opt" #todo
+termini_opts << "#{options.termini_sources.join(' ')}"
 
 if options.debug
   puts "=========================="
