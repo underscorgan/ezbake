@@ -1,8 +1,8 @@
 %if %{_systemd_el}
-%systemd_preun <%= project %>.service
+%systemd_preun <%= EZBake::Config[:project] %>.service
 %endif
 %if %{_systemd_sles}
-%service_del_preun <%= project %>.service
+%service_del_preun <%= EZBake::Config[:project] %>.service
 %endif
 %if %{_with_sysvinit}
 # If this is an uninstall (as opposed to an upgrade) then

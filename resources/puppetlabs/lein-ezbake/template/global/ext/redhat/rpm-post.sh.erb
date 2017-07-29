@@ -4,15 +4,15 @@
 systemctl daemon-reload >/dev/null 2>&1 || :
 %endif
 %if %{_systemd_el}
-%systemd_post <%= project %>.service
+%systemd_post <%= EZBake::Config[:project] %>.service
 %endif
 %if %{_systemd_sles}
-%service_add_post <%= project %>.service
+%service_add_post <%= EZBake::Config[:project] %>.service
 %endif
 %if %{_with_sysvinit}
 # If this is an install (as opposed to an upgrade)...
 if [ "$1" = "1" ]; then
-    # Register the <%= project %> service
+    # Register the <%= EZBake::Config[:project] %> service
     /sbin/chkconfig --add %{name}
 fi
 %endif

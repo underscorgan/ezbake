@@ -1,8 +1,8 @@
 %if %{_systemd_el}
-%systemd_postun_with_restart <%= project %>.service
+%systemd_postun_with_restart <%= EZBake::Config[:project] %>.service
 %endif
 %if %{_systemd_sles}
-%service_del_postun <%= project %>.service
+%service_del_postun <%= EZBake::Config[:project] %>.service
 %endif
 %if %{_with_sysvinit}
 # Remove the rundir if this is an uninstall (as opposed to an upgrade)...

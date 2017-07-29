@@ -22,7 +22,7 @@ options.additional_dependencies = []
 options.user = 'puppet'
 options.group = 'puppet'
 options.additional_dirs = []
-options.sources = ['etc','opt','usr','var']
+options.sources = []
 options.debug = false
 options.logrotate = false
 options.termini = false
@@ -107,6 +107,20 @@ options.output_type = case options.operating_system
                         fail "Can't figure out the output type for #{options.operating_system}. Teach me?"
                       end
 fail "--os-version is required!" unless options.os_version or options.output_type == 'deb'
+if options.sources.empty?
+  options.sources = case options.operating_system
+                    when :fedora, :suse, :el
+                      if options.operating_system == :el && options.os_version < 7
+                        ['etc', 'opt', 'var']
+                      else
+                        ['etc', 'opt', 'usr', 'var']
+                      end
+                    when :debian, :ubuntu
+                      ['etc', 'lib', 'opt', 'usr', 'var']
+                    else
+                      fail "I don't know what your default sources should be, pass it on the command line!"
+                    end
+end
 options.dist = "#{options.operating_system}#{options.os_version}" if options.dist.nil?
 
 if options.debug
@@ -242,7 +256,6 @@ elsif options.output_type == 'deb'
   end
   options.java = 'openjdk-8-jre-headless'
 
-  #fpm_opts << '--deb-build-depends "debhelper (>= 7.0.0~)"' 
   fpm_opts << '--deb-build-depends cdbs'
   fpm_opts << '--deb-build-depends bc' 
   fpm_opts << '--deb-build-depends mawk'
@@ -299,15 +312,12 @@ options.additional_dependencies.each do |dep|
   fpm_opts << "--depends '#{dep}'"
 end
 
-fpm_opts << "--template-scripts"
-fpm_opts << "--template-value 'user=#{options.user}'"
-fpm_opts << "--template-value 'group=#{options.group}'"
-fpm_opts << "--template-value 'project=#{options.name}'"
-fpm_opts << "--template-value 'real_name=#{options.realname}'"
-fpm_opts << "--before-install ../#{options.output_type}-pre.sh.erb" #TODO
-fpm_opts << "--after-install ../#{options.output_type}-post.sh.erb" #TODO
-fpm_opts << "--before-remove ../#{options.output_type}-preun.sh.erb" #TODO
-fpm_opts << "--after-remove ../#{options.output_type}-postun.sh.erb" #TODO
+if options.output_type == 'rpm'
+fpm_opts << "--before-install ext/redhat/#{options.output_type}-pre.sh" #TODO
+fpm_opts << "--after-install ext/redhat/#{options.output_type}-post.sh" #TODO
+fpm_opts << "--before-remove ext/redhat/#{options.output_type}-preun.sh" #TODO
+fpm_opts << "--after-remove ext/redhat/#{options.output_type}-postun.sh" #TODO
+end
 
 fpm_opts << "--force"
 
@@ -326,28 +336,30 @@ fpm_opts << "#{options.sources.join(' ')}"
 termini_opts << "#{options.termini_sources.join(' ')}"
 
 if options.debug
-  puts "=========================="
-  puts "FPM COMMAND"
-  puts "FPM_EDITOR=\"sed -i 's/%dir %attr(-/%attr(-/'\" fpm #{fpm_opts.join(' ')}"
-  puts "=========================="
+  STDERR.puts "=========================="
+  STDERR.puts "FPM COMMAND"
+  STDERR.puts "FPM_EDITOR=\"sed -i 's/%dir %attr(-/%attr(-/'\" fpm #{fpm_opts.join(' ')}"
+  STDERR.puts "=========================="
+  STDERR.puts "#{Dir.pwd}"
+  STDERR.puts "#{Dir.glob('**/*').join('\n')}"
 end
 
 # TODO: Find a better way to recursively set directory attributes for rpms.
 # This is bad and I am bad for doing it.
 out, err, stat = Open3.capture3("FPM_EDITOR=\"sed -i 's/%dir %attr(-/%attr(-/'\" fpm #{fpm_opts.join(' ')}")
 
-puts "OUTPUT\n#{out}"
-puts "ERR\n#{err}"
+STDERR.puts "OUTPUT\n#{out}"
+STDERR.puts "ERR\n#{err}"
 
 if options.termini
   if options.debug
-    puts "=========================="
-    puts "FPM COMMAND"
-    puts "fpm #{termini_opts.join(' ')}"
-    puts "=========================="
+    STDERR.puts "=========================="
+    STDERR.puts "FPM COMMAND"
+    STDERR.puts "fpm #{termini_opts.join(' ')}"
+    STDERR.puts "=========================="
   end
 
   out,err,stat = Open3.capture3("fpm #{termini_opts.join(' ')}")
-  puts "OUTPUT\n#{out}"
-  puts "ERR\n#{err}"
+  STDERR.puts "OUTPUT\n#{out}"
+  STDERR.puts "ERR\n#{err}"
 end

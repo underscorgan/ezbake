@@ -1,0 +1,62 @@
+#!/bin/bash
+
+os=$1
+
+if [ ! -d base ]; then
+        DESTDIR=base bash install.sh install_redhat
+fi
+if [ ! -d systemd_el ]; then
+        cp -r base systemd_el
+        DESTDIR=systemd_el bash install.sh systemd_redhat
+fi
+if [ ! -d old_el ]; then
+        cp -r base old_el
+        DESTDIR=old_el bash install.sh sysv_init_redhat
+fi
+# things are only different if we have docs
+
+if [ -d ext/docs ]; then
+        if [ ! -d base_deb ]; then
+                DESTDIR=base_deb bash install.sh install_deb
+                cp -r base_deb systemd_deb
+                DESTDIR=systemd_deb bash install.sh systemd_deb
+        fi
+else
+        if [ ! -d systemd_deb ]; then
+                cp -r base systemd_deb
+                DESTDIR=systemd_deb bash install.sh systemd_deb
+        fi
+fi
+
+extras=''
+
+<% unless EZBake::Config[:terminus_info].empty? -%>
+DESTDIR=termini bash install.sh termini
+extras="${extras} --build-termini"
+<% end -%>
+
+<% if EZBake::Config[:logrotate_enabled]-%>
+DESTDIR=systemd_el bash install.sh logrotate
+DESTDIR=systemd_deb bash install.sh logrotate
+DESTDIR=old_el bash install.sh logrotate_legacy
+extras="${extras} --logrotate"
+<% end -%>
+
+<% if EZBake::Config[:is_pe_build] -%>
+extras="${extras} --enterprise-build"
+<% end -%>
+if [[ "$os" =~ el-7 ]]; then
+        <%EZBake::Config[:redhat][:additional_dependencies].each do |dep| -%>
+                extras="${extras} --additional-dependency <%= dep -%>"
+        <% end -%>
+        time ruby $PWD/ext/fpm.rb $extras --realname <%= EZBake::Config[:real_name] -%> --debug --operating-system el --os-version 7 --name <%= EZBake::Config[:project] -%> --package-version <%= EZBake::Config[:version] -%> --release 1 --user <%= EZBake::Config[:user] -%> --group <%= EZBake::Config[:group] -%> --chdir systemd_el
+fi
+#time ruby $PWD/../fpm.rb $extras --build-termini --realname puppetdb --enterprise-build --debug --operating-system suse --os-version 1315 --dist sles12 --name pe-puppetdb --package-version 4.4.1 --release 1 --additional-dependency "puppet-agent" --user pe-puppetdb --group pe-puppetdb --chdir systemd_el
+#time ruby $PWD/../fpm.rb $extras --build-termini --realname puppetdb --enterprise-build --debug --operating-system el --os-version 6 --name pe-puppetdb --package-version 4.4.1 --release 1 --additional-dependency "puppet-agent" --user pe-puppetdb --group pe-puppetdb --chdir old_el --source etc,opt,var
+#time ruby $PWD/../fpm.rb $extras --build-termini --realname puppetdb --enterprise-build --debug --operating-system ubuntu --name pe-puppetdb --package-version 4.4.1 --release 1 --additional-dependency "puppet-agent" --user pe-puppetdb --group pe-puppetdb --chdir systemd_deb --dist xenial --source etc,lib,opt,usr,var
+#time ruby $PWD/../fpm.rb $extras --build-termini --realname puppetdb --enterprise-build --debug --operating-system debian --name pe-puppetdb --package-version 4.4.1 --release 1 --additional-dependency "puppet-agent" --user pe-puppetdb --group pe-puppetdb --chdir systemd_deb --dist jessie --source etc,lib,opt,usr,var
+
+#cd -
+
+# temporary, deb working!
+#fpm --output-type deb --input-type dir --name puppetserver --deb-user root --deb-group root --template-scripts --template-value 'user=puppet' --template-value 'group=puppet' --template-value 'project=puppetserver' --template-value 'real_name=puppetserver' --before-install ~/ezbake/deb-pre.sh.erb --after-install ~/ezbake/deb-post.sh.erb --force --depends openjdk-8-jre-headless --depends net-tools --depends adduser --depends procps --depends 'puppet-agent >= 4.99.0' etc lib opt usr var
