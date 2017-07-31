@@ -49,7 +49,7 @@ if [[ "$os" =~ el-7 ]]; then
         <%EZBake::Config[:redhat][:additional_dependencies].each do |dep| -%>
                 extras="${extras} --additional-dependency <%= dep -%>"
         <% end -%>
-        time ruby $PWD/ext/fpm.rb $extras --realname <%= EZBake::Config[:real_name] -%> --debug --operating-system el --os-version 7 --name <%= EZBake::Config[:project] -%> --package-version <%= EZBake::Config[:version] -%> --release 1 --user <%= EZBake::Config[:user] -%> --group <%= EZBake::Config[:group] -%> --chdir systemd_el
+        time ruby $PWD/ext/fpm.rb $extras --realname <%= EZBake::Config[:real_name] -%> --debug --operating-system el --os-version 7 --name <%= EZBake::Config[:project] -%> --package-version <%= EZBake::Config[:version] -%> --release <%= EZBake::Config[:release] -%> --user <%= EZBake::Config[:user] -%> --group <%= EZBake::Config[:group] -%> --chdir systemd_el
 fi
 #time ruby $PWD/../fpm.rb $extras --build-termini --realname puppetdb --enterprise-build --debug --operating-system suse --os-version 1315 --dist sles12 --name pe-puppetdb --package-version 4.4.1 --release 1 --additional-dependency "puppet-agent" --user pe-puppetdb --group pe-puppetdb --chdir systemd_el
 #time ruby $PWD/../fpm.rb $extras --build-termini --realname puppetdb --enterprise-build --debug --operating-system el --os-version 6 --name pe-puppetdb --package-version 4.4.1 --release 1 --additional-dependency "puppet-agent" --user pe-puppetdb --group pe-puppetdb --chdir old_el --source etc,opt,var

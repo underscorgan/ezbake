@@ -446,9 +446,10 @@ Additional uberjar dependencies:
   [lein-version]
   {:pre [(string? lein-version)]
    :post [(string? %)]}
-  (format "%s"
-          (str/replace lein-version "-.+" ""))
-  lein-version)
+  (if (.endsWith lein-version "-SNAPSHOT")
+    (format "%s"
+            (str/replace lein-version #"-SNAPSHOT" ""))
+    lein-version))
 
 (defn generate-package-release-from-version
   [lein-version]
@@ -456,7 +457,7 @@ Additional uberjar dependencies:
    :post [(string? %)]}
   (if (.endsWith lein-version "-SNAPSHOT")
     (format "%s"
-            (str/replace lein-version ".*-" "0.1"))
+            (str/replace lein-version #".*-" "0.1"))
     lein-version))
 
 ;; TODO: this is a horrible, horrible hack; I can't yet see a good way to
@@ -493,8 +494,9 @@ Additional uberjar dependencies:
                                                       platform
                                                       variable)))]
     {:project                   (:name lein-project)
-     :package-version           (generate-package-version-from-version lein-project :version)
-     :package-release           (generate-package-release-from-version lein-project :version)
+     :packaging-version         (generate-package-version-from-version (:version lein-project))
+     :packaging-release         (generate-package-release-from-version (:version lein-project))
+     ;packaging-timestamp       (generate-timestamp-string)
      :real-name                 (get-real-name (:name lein-project))
      :user                      (get-local-ezbake-var lein-project :user
                                                       (:name lein-project))
