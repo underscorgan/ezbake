@@ -448,7 +448,7 @@ Additional uberjar dependencies:
    :post [(string? %)]}
   (if (.endsWith lein-version "-SNAPSHOT")
     (format "%s"
-            (str/replace lein-version #"-SNAPSHOT" ""))
+            (str/replace lein-version #"-SNAPSHOT|-" { "-SNAPSHOT" "" "-" "."}))
     lein-version))
 
 (defn generate-package-release-from-version
@@ -456,8 +456,9 @@ Additional uberjar dependencies:
   {:pre [(string? lein-version)]
    :post [(string? %)]}
   (if (.endsWith lein-version "-SNAPSHOT")
-    (format "%s"
-            (str/replace lein-version #".*-" "0.1"))
+    (format "%s.%s"
+            (str/replace lein-version #".*-" "0.1")
+            (get-timestamp-string))
     lein-version))
 
 ;; TODO: this is a horrible, horrible hack; I can't yet see a good way to
