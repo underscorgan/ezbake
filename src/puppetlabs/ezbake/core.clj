@@ -442,6 +442,23 @@ Additional uberjar dependencies:
             (get-timestamp-string))
     lein-version))
 
+(defn generate-package-version-from-version
+  [lein-version]
+  {:pre [(string? lein-version)]
+   :post [(string? %)]}
+  (format "%s"
+          (str/replace lein-version "-.+" ""))
+  lein-version)
+
+(defn generate-package-release-from-version
+  [lein-version]
+  {:pre [(string? lein-version)]
+   :post [(string? %)]}
+  (if (.endsWith lein-version "-SNAPSHOT")
+    (format "%s"
+            (str/replace lein-version ".*-" "0.1"))
+    lein-version))
+
 ;; TODO: this is a horrible, horrible hack; I can't yet see a good way to
 ;; let the packaging library know what the version number is without faking
 ;; up a git tag; it seems like the packaging code is pretty well hard-coded
@@ -476,7 +493,8 @@ Additional uberjar dependencies:
                                                       platform
                                                       variable)))]
     {:project                   (:name lein-project)
-     :version                   (:version lein-project)
+     :package-version           (generate-package-version-from-version lein-project :version)
+     :package-release           (generate-package-release-from-version lein-project :version)
      :real-name                 (get-real-name (:name lein-project))
      :user                      (get-local-ezbake-var lein-project :user
                                                       (:name lein-project))
