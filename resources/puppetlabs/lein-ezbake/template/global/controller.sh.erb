@@ -1,6 +1,6 @@
-#!/bin/bash
+#!/usr/bin/bash
 
-os=$1
+build_os=$1
 
 if [ ! -d base ]; then
         DESTDIR=base bash install.sh install_redhat
@@ -13,6 +13,11 @@ if [ ! -d old_el ]; then
         cp -r base old_el
         DESTDIR=old_el bash install.sh sysv_init_redhat
 fi
+if [ ! -d old_sles ]; then
+        cp -r base old_sles
+        DESTDIR=old_sles bash install.sh sysv_init_suse
+fi
+
 # things are only different if we have docs
 
 if [ -d ext/docs ]; then
@@ -28,35 +33,81 @@ else
         fi
 fi
 
-extras=''
+case $build_os in
+        *el-7*)
+                os=el
+                os_version=7
+                dir=systemd_el
+                ;;
+        *el-6*)
+                os=el
+                os_version=6
+                dir=old_el
+                ;;
+        *sles-11*)
+                os=suse
+                os_version=1110
+                dir=old_sles
+                dist=sles11
+                ;;
+        *sles-12*)
+                os=suse
+                os_version=1315
+                dir=systemd_el
+                dist=sles12
+                ;;
+        *jessie*)
+                os=debian
+                dir=systemd_deb
+                ;;
+        *xenial*)
+                os=ubuntu
+                dir=systemd_deb
+                ;;
+        *stretch*)
+                os=debian
+                dir=systemd_deb
+                ;;
+        *yakkety*)
+                os=ubuntu
+                dir=systemd_deb
+                ;;
+        *)
+                echo "I have no idea what I'm doing with $build_os, teach me?" >&2
+                exit 1
+                ;;
+esac
 
+# bash will eat your spaces, so let's array. see http://mywiki.wooledge.org/BashFAQ/050 for more fun.
+params=("--user" "<%= EZBake::Config[:user] -%>" "--group" "<%= EZBake::Config[:group] -%>" "--chdir" "${dir}" "--realname" "<%= EZBake::Config[:real_name] -%>" "--debug" "--operating-system" "${os}" "--name" "<%= EZBake::Config[:project] -%>" "--package-version" "<%= EZBake::Config[:version] -%>" "--release" "<%= EZBake::Config[:release] -%>")
+if ((os_version)); then params+=("--os-version" "${os_version}"); fi
+if ((dist)); then params+=("--dist" "${dist}"); fi
 <% unless EZBake::Config[:terminus_info].empty? -%>
 DESTDIR=termini bash install.sh termini
-extras="${extras} --build-termini"
+params+=('--build-termini')
 <% end -%>
 
 <% if EZBake::Config[:logrotate_enabled]-%>
 DESTDIR=systemd_el bash install.sh logrotate
 DESTDIR=systemd_deb bash install.sh logrotate
 DESTDIR=old_el bash install.sh logrotate_legacy
-extras="${extras} --logrotate"
+DESTDIR=old_sles bash install.sh logrotate_legacy
+params+=('--logrotate')
 <% end -%>
 
 <% if EZBake::Config[:is_pe_build] -%>
-extras="${extras} --enterprise-build"
+params+=('--enterprise-build')
 <% end -%>
-if [[ "$os" =~ el-7 ]]; then
+if [[ "$build_os" =~ el-7 || "$build_os" =~ el-6 || "$build_os" =~ sles || "$build_os" =~ fedora ]]; then
         <%EZBake::Config[:redhat][:additional_dependencies].each do |dep| -%>
-                extras="${extras} --additional-dependency <%= dep -%>"
+                params+=("--additional-dependency")
+                params+=("<%= dep -%>")
         <% end -%>
-        time ruby $PWD/ext/fpm.rb $extras --realname <%= EZBake::Config[:real_name] -%> --debug --operating-system el --os-version 7 --name <%= EZBake::Config[:project] -%> --package-version <%= EZBake::Config[:version] -%> --release <%= EZBake::Config[:release] -%> --user <%= EZBake::Config[:user] -%> --group <%= EZBake::Config[:group] -%> --chdir systemd_el
+else
+        <%EZBake::Config[:debian][:additional_dependencies].each do |dep| -%>
+                params+=("--additional-dependency")
+                params+=("<%= dep -%>")
+        <% end -%>
 fi
-#time ruby $PWD/../fpm.rb $extras --build-termini --realname puppetdb --enterprise-build --debug --operating-system suse --os-version 1315 --dist sles12 --name pe-puppetdb --package-version 4.4.1 --release 1 --additional-dependency "puppet-agent" --user pe-puppetdb --group pe-puppetdb --chdir systemd_el
-#time ruby $PWD/../fpm.rb $extras --build-termini --realname puppetdb --enterprise-build --debug --operating-system el --os-version 6 --name pe-puppetdb --package-version 4.4.1 --release 1 --additional-dependency "puppet-agent" --user pe-puppetdb --group pe-puppetdb --chdir old_el --source etc,opt,var
-#time ruby $PWD/../fpm.rb $extras --build-termini --realname puppetdb --enterprise-build --debug --operating-system ubuntu --name pe-puppetdb --package-version 4.4.1 --release 1 --additional-dependency "puppet-agent" --user pe-puppetdb --group pe-puppetdb --chdir systemd_deb --dist xenial --source etc,lib,opt,usr,var
-#time ruby $PWD/../fpm.rb $extras --build-termini --realname puppetdb --enterprise-build --debug --operating-system debian --name pe-puppetdb --package-version 4.4.1 --release 1 --additional-dependency "puppet-agent" --user pe-puppetdb --group pe-puppetdb --chdir systemd_deb --dist jessie --source etc,lib,opt,usr,var
 
-#cd -
-
-# temporary, deb working!
-#fpm --output-type deb --input-type dir --name puppetserver --deb-user root --deb-group root --template-scripts --template-value 'user=puppet' --template-value 'group=puppet' --template-value 'project=puppetserver' --template-value 'real_name=puppetserver' --before-install ~/ezbake/deb-pre.sh.erb --after-install ~/ezbake/deb-post.sh.erb --force --depends openjdk-8-jre-headless --depends net-tools --depends adduser --depends procps --depends 'puppet-agent >= 4.99.0' etc lib opt usr var
+ruby $PWD/ext/fpm.rb "${params[@]}"

@@ -313,11 +313,15 @@ options.additional_dependencies.each do |dep|
 end
 
 if options.output_type == 'rpm'
-fpm_opts << "--before-install ext/redhat/#{options.output_type}-pre.sh" #TODO
-fpm_opts << "--after-install ext/redhat/#{options.output_type}-post.sh" #TODO
-fpm_opts << "--before-remove ext/redhat/#{options.output_type}-preun.sh" #TODO
-fpm_opts << "--after-remove ext/redhat/#{options.output_type}-postun.sh" #TODO
+  script_dir = 'ext/redhat'
+else
+  script_dir = 'ext/debian'
 end
+
+fpm_opts << "--before-install #{script_dir}/#{options.output_type}-pre.sh"
+fpm_opts << "--after-install #{script_dir}/#{options.output_type}-post.sh"
+fpm_opts << "--before-remove #{script_dir}/#{options.output_type}-preun.sh"
+fpm_opts << "--after-remove #{script_dir}/#{options.output_type}-postun.sh"
 
 fpm_opts << "--force"
 
@@ -341,7 +345,7 @@ if options.debug
   STDERR.puts "FPM_EDITOR=\"sed -i 's/%dir %attr(-/%attr(-/'\" fpm #{fpm_opts.join(' ')}"
   STDERR.puts "=========================="
   STDERR.puts "#{Dir.pwd}"
-  STDERR.puts "#{Dir.glob('**/*').join('\n')}"
+#  STDERR.puts "#{Dir.glob('**/*').join('\n')}"
 end
 
 # TODO: Find a better way to recursively set directory attributes for rpms.
