@@ -823,6 +823,14 @@ Additional uberjar dependencies:
         rake-call ["rake" "pl:jenkins:uber_build[5]"]]
     (exec/lazy-sh rake-call {:dir staging-dir})))
 
+(defmethod action "local-build"
+  [_ lein-project build-target]
+  (action "stage" lein-project build-target)
+  (exec/exec "rake" "package:bootstrap" :dir staging-dir)
+  (let [downstream-job nil
+        rake-call ["rake" "pl:local_build"]]
+    (exec/lazy-sh rake-call {:dir staging-dir})))
+
 (defmethod action :default
   [action & args]
   (lein-main/abort (str/join \newline ["Unrecognized option:" action])))
