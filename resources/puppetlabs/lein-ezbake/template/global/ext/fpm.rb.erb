@@ -110,13 +110,17 @@ fail "--os-version is required!" unless options.os_version or options.output_typ
 if options.sources.empty?
   options.sources = case options.operating_system
                     when :fedora, :suse, :el
-                      if options.operating_system == :el && options.os_version < 7
+                      if options.operating_system == :el && options.os_version < 7 || (options.operating_system == :suse && options.os_version <= 1210)
                         ['etc', 'opt', 'var']
                       else
                         ['etc', 'opt', 'usr', 'var']
                       end
                     when :debian, :ubuntu
-                      ['etc', 'lib', 'opt', 'usr', 'var']
+                      if options.dist == 'trusty'
+                        ['etc', 'opt', 'var']
+                      else
+                        ['etc', 'lib', 'opt', 'usr', 'var']
+                      end
                     else
                       fail "I don't know what your default sources should be, pass it on the command line!"
                     end
@@ -249,7 +253,7 @@ if options.output_type == 'rpm'
   fpm_opts << "--edit"
   fpm_opts << "--category 'System Environment/Daemons'"
   termini_opts << "--category 'Development/Libraries'"
-#dev specific options
+#deb specific options
 elsif options.output_type == 'deb'
   if options.dist != "#{options.operating_system}#{options.os_version}"
     options.release = "#{options.release}#{options.dist}"
