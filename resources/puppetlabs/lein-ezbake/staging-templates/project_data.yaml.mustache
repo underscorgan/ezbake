@@ -37,16 +37,12 @@ templates:
   - source: ext/ezbake.tmpfiles.conf.erb
     target: ext/{{{project}}}.tmpfiles.conf
   - ext/fpm.rb.erb
-  - ext/redhat/rpm-pre.sh.erb
-  - ext/redhat/rpm-post.sh.erb
-  - ext/redhat/rpm-preun.sh.erb
-  - ext/redhat/rpm-postun.sh.erb
+  - ext/redhat/preinst.erb
+  - ext/redhat/postinst.erb
+  - ext/redhat/prerm.erb
+  - ext/redhat/postrm.erb
   - ext/redhat/init.erb
   - ext/redhat/init.suse.erb
-  - ext/debian/deb-pre.sh.erb
-  - ext/debian/deb-post.sh.erb
-  - ext/debian/deb-preun.sh.erb
-  - ext/debian/deb-postun.sh.erb
   - ext/debian/changelog.erb
   - ext/debian/control.erb
   - ext/debian/dirs.erb

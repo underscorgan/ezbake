@@ -322,10 +322,10 @@ else
   script_dir = 'ext/debian'
 end
 
-fpm_opts << "--before-install #{script_dir}/#{options.output_type}-pre.sh"
-fpm_opts << "--after-install #{script_dir}/#{options.output_type}-post.sh"
-fpm_opts << "--before-remove #{script_dir}/#{options.output_type}-preun.sh"
-fpm_opts << "--after-remove #{script_dir}/#{options.output_type}-postun.sh"
+fpm_opts << "--before-install #{script_dir}/preinst"
+fpm_opts << "--after-install #{script_dir}/postinst"
+fpm_opts << "--before-remove #{script_dir}/prerm"
+fpm_opts << "--after-remove #{script_dir}/postrm"
 
 fpm_opts << "--force"
 
