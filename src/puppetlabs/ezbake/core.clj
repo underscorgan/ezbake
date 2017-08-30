@@ -819,7 +819,7 @@ Additional uberjar dependencies:
   (action "stage" lein-project build-target)
   (exec/exec "rake" "package:bootstrap" :dir staging-dir)
   (let [downstream-job nil
-        rake-call ["rake" "pl:jenkins:uber_build[5]"]]
+        rake-call ["rake" "pl:jenkins:trigger_build_local_auth"]]
     (exec/lazy-sh rake-call {:dir staging-dir})))
 
 (defmethod action "local-build"
