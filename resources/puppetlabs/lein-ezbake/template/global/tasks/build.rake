@@ -72,4 +72,20 @@ namespace :pl do
       FileUtils.cp_r(pkg_path, nested_output)
     end
   end
+  namespace :jenkins do
+    desc "trigger jenkins packaging job"
+    task :trigger_build, [:auth_string, :job_url] => "pl:fetch" do |t, args|
+      props = Pkg::Config.config_to_yaml
+      bundle = Pkg::Util::Git.git_bundle('HEAD')
+      curl_opts = [
+        '--request POST',
+        "--user #{args[:auth_string]}",
+        "--form file0=@#{props}",
+        "--form file1=@#{bundle}",
+        %(--form json='{"parameter": [{"name":"BUILD_PROPERTIES", "file":"file0"},{"name":"PROJECT_BUNDLE", "file":"file1"}]}')
+      ]
+      Pkg::Util::Net.curl_form_data("#{args[:job_url]}/build", curl_opts)
+      Pkg::Util::Net.print_url_info(args[:job_url])
+    end
+  end
 end
