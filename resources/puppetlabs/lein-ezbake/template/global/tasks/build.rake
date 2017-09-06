@@ -101,12 +101,7 @@ namespace :pl do
     task :trigger_build_local_auth => "pl:fetch" do
       auth = Pkg::Util.check_var('JENKINS_USER_AUTH', ENV['JENKINS_USER_AUTH'])
       if auth =~ /:/
-        if Pkg::Config.build_pe
-          Pkg::Util.check_var('PE_VER', ENV['PE_VER'])
-          Pkg::Util::RakeUtils.invoke_task("pl:jenkins:trigger_build", "#{auth}", "https://jenkins-cinext.delivery.puppetlabs.net/job/legacy_ezbake_pe_packaging" )
-        else
-          Pkg::Util::RakeUtils.invoke_task("pl:jenkins:trigger_build", "#{auth}", "https://jenkins-cinext.delivery.puppetlabs.net/job/legacy_ezbake_packaging" )
-        end
+        Pkg::Util::RakeUtils.invoke_task("pl:jenkins:trigger_build", "#{auth}", "https://jenkins-master-prod-1.delivery.puppetlabs.net/job/experimental_auto_packaging_packaging-os-clj_lein-ezbake-new_master" )
       else
         STDERR.puts "You need to pass the environment variable JENKINS_USER_AUTH"
         STDERR.puts "It should be in the format <LDAP username>:<access token>"
