@@ -79,12 +79,22 @@ namespace :pl do
       bundle = Pkg::Util::Git.git_bundle('HEAD')
       curl_opts = [
         '--request POST',
-        "--user #{args[:auth_string]}",
         "--form file0=@#{props}",
         "--form file1=@#{bundle}",
-        %(--form json='{"parameter": [{"name":"BUILD_PROPERTIES", "file":"file0"},{"name":"PROJECT_BUNDLE", "file":"file1"}]}')
       ]
-      Pkg::Util::Net.curl_form_data("#{args[:job_url]}/build", curl_opts)
+      if Pkg::Config.build_pe
+        Pkg::Util.check_var('PE_VER', ENV['PE_VER'])
+        curl_opts << %(--form json='{"parameter": [{"name":"PE_VER", "value":"#{ENV['PE_VER']}"},{"name":"BUILD_PROPERTIES", "file":"file0"},{"name":"PROJECT_BUNDLE", "file":"file1"}]}')
+      else
+        curl_opts << %(--form json='{"parameter": [{"name":"BUILD_PROPERTIES", "file":"file0"},{"name":"PROJECT_BUNDLE", "file":"file1"}]}')
+      end
+      if args[:auth_string] =~ /:/
+        curl_opts << "--user #{args[:auth_string]}"
+        Pkg::Util::Net.curl_form_data("#{args[:job_url]}/build", curl_opts)
+      #assume we're using a token
+      else
+        Pkg::Util::Net.curl_form_data("#{args[:job_url]}/build?token=#{args[:auth_string]}", curl_opts)
+      end
       Pkg::Util::Net.print_url_info(args[:job_url])
     end
     desc "trigger jenkins packaging job with local auth"
