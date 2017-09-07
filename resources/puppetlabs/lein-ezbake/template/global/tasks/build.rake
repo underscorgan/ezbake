@@ -72,15 +72,22 @@ namespace :pl do
       FileUtils.cp_r(pkg_path, nested_output)
     end
   end
+  desc "get the property and bundle artifacts ready"
+  task :prep_artifacts, [:output_dir] => "pl:fetch" do |t, args|
+    props = Pkg::Config.config_to_yaml
+    bundle = Pkg::Util::Git.git_bundle('HEAD')
+    FileUtils.cp(props, "#{args[:output_dir]}/BUILD_PROPERTIES")
+    FileUtils.cp(bundle, "#{args[:output_dir]}/PROJECT_BUNDLE")
+  end
   namespace :jenkins do
     desc "trigger jenkins packaging job"
-    task :trigger_build, [:auth_string, :job_url] => "pl:fetch" do |t, args|
-      props = Pkg::Config.config_to_yaml
-      bundle = Pkg::Util::Git.git_bundle('HEAD')
+    task :trigger_build, [:auth_string, :job_url] do |t, args|
+      Pkg::Util::RakeUtils.invoke_task("pl:prep_artifacts", "#{Dir.pwd}")
+
       curl_opts = [
         '--request POST',
-        "--form file0=@#{props}",
-        "--form file1=@#{bundle}",
+        "--form file0=@#{Dir.pwd}/BUILD_PROPERTIES",
+        "--form file1=@#{Dir.pwd}/PROJECT_BUNDLE",
       ]
       if Pkg::Config.build_pe
         Pkg::Util.check_var('PE_VER', ENV['PE_VER'])
