@@ -106,10 +106,15 @@ namespace :pl do
     end
     desc "trigger jenkins packaging job with local auth"
     task :trigger_build_local_auth => "pl:fetch" do
-      auth = Pkg::Util.check_var('JENKINS_USER_AUTH', ENV['JENKINS_USER_AUTH'])
-      if auth =~ /:/
-        Pkg::Util::RakeUtils.invoke_task("pl:jenkins:trigger_build", "#{auth}", "https://jenkins-master-prod-1.delivery.puppetlabs.net/job/experimental_auto_packaging_packaging-os-clj_lein-ezbake-new_master" )
+      if Pkg::Config.build_pe
+        job_url = "https://cinext-jenkinsmaster-enterprise-prod-1.delivery.puppetlabs.net/job/experimental_auto_various-packaging-jobs_packaging-os-clj_lein-ezbake-generic"
       else
+        job_url = "https://jenkins-master-prod-1.delivery.puppetlabs.net/job/experimental_auto_various-packaging-jobs_packaging-os-clj_lein-ezbake-generic"
+      end
+      begin
+        auth = Pkg::Util.check_var('JENKINS_USER_AUTH', ENV['JENKINS_USER_AUTH'])
+        Pkg::Util::RakeUtils.invoke_task("pl:jenkins:trigger_build", auth, job_url)
+      rescue
         STDERR.puts "You need to pass the environment variable JENKINS_USER_AUTH"
         STDERR.puts "It should be in the format <LDAP username>:<access token>"
         STDERR.puts "To find your access token, go to http://<jenkins-url>/me/configure"
