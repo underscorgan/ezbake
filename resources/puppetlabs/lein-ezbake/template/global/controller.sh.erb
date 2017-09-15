@@ -78,7 +78,7 @@ case $os in
                 fi
                 ;;
         el)
-                if [ $os_version" -gt '6' ]; then
+                if [ "$os_version" -gt '6' ]; then
                         dir="$basepath/systemd_el"
                 else
                         dir="$basepath/old_el"
@@ -134,5 +134,7 @@ else
                 params+=("<%= dep -%>")
         <% end -%>
 fi
+
+params+=('--debug')
 
 ruby $PWD/ext/fpm.rb "${params[@]}"
