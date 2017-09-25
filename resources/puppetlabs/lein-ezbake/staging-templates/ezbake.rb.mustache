@@ -44,6 +44,11 @@ module EZBake
                           :additional_install => [{{{redhat-install}}}],
                           :pre_start_action => [{{{redhat-pre-start-action}}}],
                           :post_start_action => [{{{redhat-post-start-action}}}],
+                          :postinst_triggers => {
+                                                 {{#redhat-postinst-triggers}}
+                                                   "{{{package}}}" => [{{{script}}}],
+                                                 {{/redhat-postinst-triggers}}
+                                                },
                           },
       :main_namespace => '{{{main-namespace}}}',
       :java_args      => '{{{java-args}}}',

@@ -55,6 +55,10 @@
   [{:package schema/Str
     :version schema/Str}])
 
+(def RpmTriggers
+  [{:package schema/Str
+    :script [schema/Str]}])
+
 (def LocalProjectVars
   {(schema/optional-key :user) schema/Str
    (schema/optional-key :group) schema/Str
@@ -71,6 +75,7 @@
    (schema/optional-key :open-file-limit) schema/Int
    (schema/optional-key :main-namespace) schema/Str
    (schema/optional-key :java-args) schema/Str
+   (schema/optional-key :redhat-postinst-triggers) RpmTriggers
    (schema/optional-key :logrotate-enabled) schema/Bool})
 
 (def UberjarInfo
@@ -527,6 +532,7 @@ Additional uberjar dependencies:
      :redhat-post-start-action  (get-quoted-ezbake-values :redhat :post-start-action)
      :terminus-map              termini
      :replaces-pkgs             (get-local-ezbake-var lein-project :replaces-pkgs [])
+     :redhat-postinst-triggers  (map (fn [{:keys [package script]}] {:package package :script (quoted-list script)})(get-local-ezbake-var lein-project :redhat-postinst-triggers []))
      :start-after               (quoted-list (get-local-ezbake-var lein-project :start-after []))
      :reload-timeout            (get-local-ezbake-var lein-project :reload-timeout "120")
      :start-timeout             (get-local-ezbake-var lein-project :start-timeout "300")
