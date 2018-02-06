@@ -144,12 +144,12 @@ namespace :pl do
     task :trigger_build_local_auth => "pl:fetch" do
       if Pkg::Config.build_pe
         jenkins = 'cinext-jenkinsmaster-enterprise-prod-1'
-        stream = 'enterprise'
+        stream = 'experimental_auto'
       else
         jenkins = 'jenkins-master-prod-1'
-        stream = 'platform'
+        stream = 'experimental_auto'
       end
-      job_url = "https://#{jenkins}.delivery.puppetlabs.net/job/#{stream}_various-packaging-jobs_packaging-os-clj_lein-ezbake-generic"
+      job_url = "https://#{jenkins}.delivery.puppetlabs.net/job/#{stream}_various-packaging-jobs-legacy_packaging-os-clj_lein-ezbake-generic"
 
       begin
         auth = Pkg::Util.check_var('JENKINS_USER_AUTH', ENV['JENKINS_USER_AUTH'])
