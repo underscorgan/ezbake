@@ -35,7 +35,7 @@ namespace :pl do
         platform_path = platform.gsub(/\-/, '')
         os, ver = /([a-zA-Z]+)(\d+)/.match(platform_path).captures
         puts "===================================="
-        puts "Packaging for #{os} #{ver}"
+        puts "ZOMG! Packaging for #{os} #{ver}"
         puts "===================================="
         stdout, stderr, exitstatus = Pkg::Util::Execution.capture3(%(bash controller.sh #{os} #{ver} #{staging_path}))
         Pkg::Util::Execution.success?(exitstatus) or raise "Error running packaging: #{stdout}\n#{stderr}"
