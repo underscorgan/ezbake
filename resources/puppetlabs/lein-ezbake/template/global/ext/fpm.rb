@@ -274,10 +274,11 @@ if options.output_type == 'rpm'
   termini_opts << "--rpm-auto-add-exclude-directories /opt/puppetlabs/puppet/lib/ruby/vendor_ruby/puppet/util/puppetdb"
   fpm_opts << "--rpm-attr 750,#{options.user},#{options.group}:/etc/puppetlabs/#{options.realname}"
   fpm_opts << "--rpm-attr 700,#{options.user},#{options.group}:#{options.app_logdir}"
-  fpm_opts << "--rpm-attr -,#{options.user},#{options.group}:#{options.app_data}"
+  fpm_opts << "--rpm-attr -,#{options.user},#{options.group}:#{options.app_data}:recurse"
+  fpm_opts << "--rpm-attr 770,#{options.user},#{options.group}:#{options.app_data}"
   fpm_opts << "--rpm-attr 755,#{options.user},#{options.group}:#{options.app_rundir}"
 
-  fpm_opts << "--edit"
+  #fpm_opts << "--edit"
   fpm_opts << "--category 'System Environment/Daemons'"
   termini_opts << "--category 'Development/Libraries'"
 #deb specific options
@@ -406,7 +407,7 @@ termini_opts << "#{options.termini_sources.join(' ')}"
 # should refactor how we're building this package to explicitly set the root/root
 # ownership for everything we need and set the default user/group attributes to
 # be owned by the app user/group. But, in the interim we have this.
-fpm_editor = 'FPM_EDITOR="sed -i \'s/%dir %attr(-\(.*\)/%attr(-\1\n%dir %attr(770\1/\'"'
+#fpm_editor = 'FPM_EDITOR="sed -i \'s/%dir %attr(-\(.*\)/%attr(-\1\n%dir %attr(770\1/\'"'
 
 if options.debug
   puts "=========================="
@@ -415,13 +416,13 @@ if options.debug
   puts "=========================="
   puts "=========================="
   puts "FPM COMMAND"
-  puts "#{fpm_editor} fpm #{fpm_opts.join(' ')}"
+  puts "fpm #{fpm_opts.join(' ')}"
   puts "=========================="
   puts "#{Dir.pwd}"
 end
 
 # fpm sends all output to stdout
-out, _, stat = Open3.capture3("#{fpm_editor} fpm #{fpm_opts.join(' ')}")
+out, _, stat = Open3.capture3("fpm #{fpm_opts.join(' ')}")
 fail "Error trying to run FPM for #{options.dist}!\n#{out}" unless stat.success?
 
 puts "#{out}"
