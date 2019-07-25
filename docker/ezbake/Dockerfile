@@ -52,9 +52,11 @@ RUN yum clean all && \
 RUN curl --output /usr/local/bin/lein https://raw.githubusercontent.com/technomancy/leiningen/stable/bin/lein && \
     chmod 0755 /usr/local/bin/lein && \
     /usr/local/bin/lein
-RUN gem install --no-doc bundler fpm && \
+RUN gem install --no-doc bundler && \
     mkdir /workspace && \
     mkdir /ezbake_src
+COPY docker/ezbake/fpm-1.11.1a.gem /
+RUN gem install --no-doc fpm-1.11.1a.gem
 COPY docker/ezbake/docker-entrypoint.sh /
 RUN chmod +x /docker-entrypoint.sh
 
