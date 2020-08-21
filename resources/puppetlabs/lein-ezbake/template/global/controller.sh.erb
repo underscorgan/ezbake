@@ -26,6 +26,10 @@ if [ ! -d "$basepath/systemd_el" ]; then
         cp -r "$basepath/base" "$basepath/systemd_el"
         DESTDIR="$basepath/systemd_el" bash install.sh systemd_redhat
 fi
+if [ ! -d "$basepath/systemd_sles" ]; then
+        cp -r "$basepath/base" "$basepath/systemd_sles"
+        DESTDIR="$basepath/systemd_sles" bash install.sh systemd_suse
+fi
 if [ ! -d "$basepath/old_el" ]; then
         cp -r "$basepath/base" "$basepath/old_el"
         DESTDIR="$basepath/old_el" bash install.sh sysv_init_redhat
@@ -35,7 +39,7 @@ if [ ! -d "$basepath/old_sles" ]; then
         DESTDIR="$basepath/old_sles" bash install.sh sysv_init_suse
 fi
 
-<%- rpm_paths = [ "$basepath/systemd_el", "$basepath/old_el", "$basepath/old_sles" ] -%>
+<%- rpm_paths = [ "$basepath/systemd_el", "$basepath/systemd_sles", "$basepath/old_el", "$basepath/old_sles" ] -%>
 
 # things are only different if we have docs, deb docs get
 # installed in an unversioned folder but rpm docs get installed

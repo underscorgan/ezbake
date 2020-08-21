@@ -8,6 +8,8 @@ JAVA_BIN="/opt/puppetlabs/server/bin/java"
 # Modify this if you'd like to change the memory allocation, enable JMX, etc
 JAVA_ARGS="<%= EZBake::Config[:java_args] %>"
 
+JAVA_OOM_ARGS="-XX:+CrashOnOutOfMemoryError -XX:ErrorFile=\"\${app_logdir}/\${real_name}_err_pid%p.log\""
+
 # Modify this as you would JAVA_ARGS but for non-service related subcommands
 JAVA_ARGS_CLI="${JAVA_ARGS_CLI:-<%= EZBake::Config[:java_args_cli] %>}"
 

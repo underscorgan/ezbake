@@ -248,6 +248,11 @@ function task_defaults_redhat {
     install -m 0644 ext/default "${DESTDIR}${defaultsdir_redhat}/<%= EZBake::Config[:project] %>"
 }
 
+function task_defaults_suse {
+    install -d -m 0755 "${DESTDIR}${defaultsdir_redhat}"
+    install -m 0644 ext/default.suse "${DESTDIR}${defaultsdir_redhat}/<%= EZBake::Config[:project] %>"
+}
+
 function task_defaults_deb {
     install -d -m 0755 "${DESTDIR}${defaultsdir_debian}"
     install -m 0644 ext/debian/<%= EZBake::Config[:project] %>.default_file "${DESTDIR}${defaultsdir_debian}/<%= EZBake::Config[:project] %>"
@@ -275,6 +280,16 @@ function task_systemd_redhat {
     install -d -m 0755 "${DESTDIR}${tmpfilesdir}"
     install -m 0644 ext/<%= EZBake::Config[:project] %>.tmpfiles.conf "${DESTDIR}${tmpfilesdir}/<%= EZBake::Config[:project] %>.conf"
 }
+
+# Install the systemd and defaults configuration for Suse.
+function task_systemd_suse {
+    task defaults_suse
+    install -d -m 0755 "${DESTDIR}${unitdir_redhat}"
+    install -m 0644 ext/redhat/<%= EZBake::Config[:project] %>.service "${DESTDIR}${unitdir_redhat}/<%= EZBake::Config[:project] %>.service"
+    install -d -m 0755 "${DESTDIR}${tmpfilesdir}"
+    install -m 0644 ext/<%= EZBake::Config[:project] %>.tmpfiles.conf "${DESTDIR}${tmpfilesdir}/<%= EZBake::Config[:project] %>.conf"
+}
+
 
 # Install the sysv and defaults configuration for Debian.
 function task_sysv_init_deb {
