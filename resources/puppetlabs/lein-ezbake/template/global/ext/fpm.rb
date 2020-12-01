@@ -13,7 +13,7 @@ options.systemd_sles = 0
 options.old_el = 0
 options.old_sles = 0
 options.sles = 0
-options.java = 'java-1.8.0-openjdk-headless'
+options.java = '"java >= 1.8"'
 options.release = 1
 options.is_pe = false
 options.replaces = {}
@@ -187,7 +187,7 @@ if options.output_type == 'rpm'
     options.systemd = 1
     options.systemd_sles = 1
     options.sles = 1
-    options.java = 'java-1_8_0-openjdk-headless'
+    # options.java = 'java-1_8_0-openjdk-headless'
   elsif options.operating_system == :sles #old sles
     options.sysvinit = 1
     options.old_sles = 1
@@ -285,7 +285,7 @@ elsif options.output_type == 'deb'
   if options.dist != "#{options.operating_system}#{options.os_version}"
     options.release = "#{options.release}#{options.dist}"
   end
-  options.java = 'openjdk-8-jre-headless'
+  options.java = '"openjdk-11-jre-headless | openjdk-8-jre-headless"'
 
   if options.dist == 'buster' # debian 10 uses java11
     options.java = 'openjdk-11-jre-headless'
